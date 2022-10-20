@@ -41,7 +41,7 @@ mega_etl = "0.1"
 Next, in your Rust code, you will need to implement the following.
 
 * Define a struct that models database table. Each column in the table is represented by a data field in the `struct`.
-* Implement a required `transform()` function to give the above struct the `Transformer` trait. The function takes a `Vec<u8>` byte array as input parameter, and returns a populated `struct` instance.
+* Implement a required `transform()` function to give the above struct the `Transformer` trait. The function takes a `Vec<u8>` byte array as input argument, and returns a SQL string for the database.
 * Set variables for the connection string to TiDB and configurations for the inbound connector where the input `Vec<u8>` would be retrieved (eg from a Kafka queue or a HTTP service or a temp database table in Redis).
 
 First, let's define the data structure for the database table. It is a table for order records for an e-commerce web site.
