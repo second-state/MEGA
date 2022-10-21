@@ -1,8 +1,14 @@
 pub use async_trait::async_trait;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::Server;
+use hyper::{Body, Request, Response};
 pub use mysql_async::prelude::*;
 pub use mysql_async::*;
-use std::sync::{Arc, Mutex};
+use std::convert::Infallible;
+use std::net::ToSocketAddrs;
+use std::sync::Arc;
 use thiserror::Error;
+use tokio::sync::Mutex;
 use url::Url;
 
 #[derive(Error, Debug)]
@@ -62,6 +68,54 @@ pub trait Transformer {
     }
 }
 
+async fn handle_request<T: Transformer>(
+    req: Request<Body>,
+    conn: Arc<Mutex<Conn>>,
+) -> anyhow::Result<Response<Body>> {
+    log::info!("receive data");
+    let content = hyper::body::to_bytes(req.into_body())
+        .await
+        .unwrap()
+        .to_vec();
+    match T::transform(content.clone()).await {
+        Ok(sql_string) => {
+            // exec the query string
+            // conn.lock().await.exec(stmt, params)
+            log::info!("receive {sql_string:?}");
+            match conn
+                .lock()
+                .await
+                .exec::<String, String, ()>(sql_string, ())
+                .await
+            {
+                Ok(_) => return Ok(Response::new(Body::from("Success"))),
+                Err(e) => return Ok(Response::new(Body::from(e.to_string()))),
+            }
+        }
+        Err(TransformerError::Unimplemented) => {
+            log::info!("skip transform");
+        }
+        Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
+        Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
+    }
+    match T::transform_save(content, conn).await {
+        Ok(_) => {
+            // exec the query string
+            // conn.lock().await.exec(stmt, params)
+            return Ok(Response::new(Body::from("Success")));
+        }
+        Err(TransformerError::Unimplemented) => {
+            log::info!("skip transform_save");
+        }
+        Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
+        Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
+    }
+    // T::transform(content, conn).await;
+    Ok(Response::new(Body::from(
+        "One of transform and transform_save must be implemented.",
+    )))
+}
+
 pub struct Pipe {
     mysql_conn: Arc<Pool>,
     connector_uri: Option<String>,
@@ -82,7 +136,38 @@ impl Pipe {
     pub async fn start<T: Transformer + 'static>(&mut self) -> TransformerResult<()> {
         let uri = self.connector_uri.as_ref().unwrap();
         match DataSource::parse_uri(uri).map_err(|e| TransformerError::Custom(e.to_string()))? {
-            DataSource::Hyper(addr, port) => Err(TransformerError::Unimplemented),
+            DataSource::Hyper(addr, port) => {
+                let addr = (addr, port)
+                    .to_socket_addrs()
+                    .map_err(|e| TransformerError::Custom(e.to_string()))?
+                    .nth(0);
+                let addr = if addr.is_none() {
+                    return Err(TransformerError::Custom("Empty addr".into()));
+                } else {
+                    addr.unwrap()
+                };
+
+                let make_svc = make_service_fn(|_| {
+                    let pool = self.mysql_conn.clone();
+                    async move {
+                        let conn = Arc::new(Mutex::new(
+                            pool.get_conn()
+                                .await
+                                .map_err(|e| TransformerError::Custom(e.to_string()))
+                                .unwrap(),
+                        ));
+                        Ok::<_, Infallible>(service_fn(move |req| {
+                            let conn = conn.clone();
+                            handle_request::<T>(req, conn)
+                        }))
+                    }
+                });
+                let server = Server::bind(&addr).serve(make_svc);
+                server
+                    .await
+                    .map_err(|e| TransformerError::Custom(e.to_string()))?;
+                Ok(())
+            }
             DataSource::Redis | DataSource::Kafka => Err(TransformerError::Unimplemented),
             DataSource::Unknown => Err(TransformerError::Custom("Unknown data source".to_string())),
         }
