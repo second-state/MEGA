@@ -19,6 +19,8 @@ pub enum TransformerError {
     Custom(String),
     #[error("unknown data store error")]
     Unknown,
+    #[error("skip the data")]
+    Skip,
 }
 
 pub type TransformerResult<T> = std::result::Result<T, TransformerError>;
@@ -91,12 +93,14 @@ async fn handle_request<T: Transformer>(
                 Ok(_) => return Ok(Response::new(Body::from("Success"))),
                 Err(e) => return Ok(Response::new(Body::from(e.to_string()))),
             }
+            // return Ok(Response::new(Body::from("Success")));
         }
         Err(TransformerError::Unimplemented) => {
             log::info!("skip transform");
         }
         Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
         Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
+        Err(TransformerError::Skip) => return Ok(Response::new(Body::from("skip this data"))),
     }
     match T::transform_save(content, conn).await {
         Ok(_) => {
@@ -109,6 +113,7 @@ async fn handle_request<T: Transformer>(
         }
         Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
         Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
+        Err(TransformerError::Skip) => return Ok(Response::new(Body::from("skip this data"))),
     }
     // T::transform(content, conn).await;
     Ok(Response::new(Body::from(
