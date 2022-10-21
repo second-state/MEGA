@@ -36,3 +36,18 @@ pub trait Transformer {
         Err(TransformerError::Unimplemented.into())
     }
 }
+
+pub struct Pipe {
+    mysql_conn: Arc<Pool>,
+    connector_uri: Option<String>,
+}
+
+impl Pipe {
+    pub async fn new<Str: AsRef<str>>(mysql_uri: Str, data_source_uri: String) -> Self {
+        todo!()
+    }
+
+    pub async fn start<T: Transformer + 'static>(&mut self) -> TransformerResult<()> {
+        todo!()
+    }
+}
