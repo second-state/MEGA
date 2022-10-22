@@ -1,5 +1,7 @@
 [workspace]
 members = [
     "mega_etl",
-    "app"
+    "transaction",
+    "order",
+    "order_conn"
 ]

@@ -58,7 +58,7 @@ impl DataSource {
 
 #[async_trait]
 pub trait Transformer {
-    async fn transform(_inbound_data: Vec<u8>) -> TransformerResult<String> {
+    async fn transform(_inbound_data: Vec<u8>) -> TransformerResult<Vec<String>> {
         Err(TransformerError::Unimplemented.into())
     }
 
@@ -80,20 +80,22 @@ async fn handle_request<T: Transformer>(
         .unwrap()
         .to_vec();
     match T::transform(content.clone()).await {
-        Ok(sql_string) => {
+        Ok(sql_strings) => {
             // exec the query string
             // conn.lock().await.exec(stmt, params)
-            log::debug!("receive {sql_string:?}");
-            match conn
-                .lock()
-                .await
-                .exec::<String, String, ()>(sql_string, ())
-                .await
-            {
-                Ok(_) => return Ok(Response::new(Body::from("Success"))),
-                Err(e) => return Ok(Response::new(Body::from(e.to_string()))),
+            for sql_string in sql_strings {
+                log::debug!("receive {sql_string:?}");
+
+                if let Err(e) = conn
+                    .lock()
+                    .await
+                    .exec::<String, String, ()>(sql_string, ())
+                    .await
+                {
+                    return Ok(Response::new(Body::from(e.to_string())));
+                }
             }
-            // return Ok(Response::new(Body::from("Success")));
+            return Ok(Response::new(Body::from("Success")));
         }
         Err(TransformerError::Unimplemented) => {
             log::debug!("skip transform");
