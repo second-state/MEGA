@@ -21,6 +21,7 @@ On Linux, you can use the following commands to install Rust and WasmEdge.
 ```bash
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
 # Install WebAssembly target for Rust
 rustup target add wasm32-wasi
 
