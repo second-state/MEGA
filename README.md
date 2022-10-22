@@ -151,7 +151,7 @@ curl http://localhost:8080/ -X POST -d @order.json
 The JSON data in `order.json` is sent to the ETL `transform()` function as inbound data. The function parses it and generates the SQL string, which is automatically executed on the connected TiDB Cloud instance. You can now connect to TiDB Cloud from your database browser and see the `order` record in the database.
 
 ### Resources
-
+Links used or referred to
 https://github.com/second-state/http_req
 
 https://explorer.blocknative.com/?v=1.36.1&0=ethereum&1=main
