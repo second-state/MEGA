@@ -74,7 +74,7 @@ async fn handle_request<T: Transformer>(
     req: Request<Body>,
     conn: Arc<Mutex<Conn>>,
 ) -> anyhow::Result<Response<Body>> {
-    log::info!("receive data");
+    log::debug!("receive data");
     let content = hyper::body::to_bytes(req.into_body())
         .await
         .unwrap()
@@ -83,7 +83,7 @@ async fn handle_request<T: Transformer>(
         Ok(sql_string) => {
             // exec the query string
             // conn.lock().await.exec(stmt, params)
-            log::info!("receive {sql_string:?}");
+            log::debug!("receive {sql_string:?}");
             match conn
                 .lock()
                 .await
@@ -96,7 +96,7 @@ async fn handle_request<T: Transformer>(
             // return Ok(Response::new(Body::from("Success")));
         }
         Err(TransformerError::Unimplemented) => {
-            log::info!("skip transform");
+            log::debug!("skip transform");
         }
         Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
         Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
@@ -109,7 +109,7 @@ async fn handle_request<T: Transformer>(
             return Ok(Response::new(Body::from("Success")));
         }
         Err(TransformerError::Unimplemented) => {
-            log::info!("skip transform_save");
+            log::debug!("skip transform_save");
         }
         Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
         Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
