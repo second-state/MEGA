@@ -149,3 +149,19 @@ curl http://localhost:8080/ -X POST -d @order.json
 ```
 
 The JSON data in `order.json` is sent to the ETL `transform()` function as inbound data. The function parses it and generates the SQL string, which is automatically executed on the connected TiDB Cloud instance. You can now connect to TiDB Cloud from your database browser and see the `order` record in the database.
+
+### Resources
+
+* [WasmEdge Runtime](https://github.com/WasmEdge/)
+* [WasmEdge book](https://wasmedge.org/book/en/)
+* [Second State](https://www.secondstate.io/)
+* [TiDB project](https://github.com/pingcap/tidb)
+* [TiDB Cloud](https://tidbcloud.com/)
+
+### Join us!
+
+* [Twitter @realwasmedge](https://twitter.com/realwasmedge)
+* [Discord](https://discord.gg/JHxMj9EQbA)
+* [Email list](https://groups.google.com/g/wasmedge/)
+* [Slack #WasmEdge](https://slack.cncf.io/)
+

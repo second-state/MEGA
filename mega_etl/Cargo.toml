@@ -2,8 +2,17 @@
 name = "mega_etl"
 version = "0.1.0"
 edition = "2021"
+authors = ["Tricster <mediosrity@gmail.com>", "Michael Yuan <michael@secondstate.io>", "Miley Fu <furao@secondstate.io>"]
+license = "Apache-2.0"
+readme = "../README.md"
+repository = "https://github.com/second-state/MEGA"
+homepage = "https://github.com/second-state/MEGA"
+description = """
+A cloud-native ETL (Extract, Transform, Load) application framework based on the WasmEdge WebAssembly runtime for developers to filter, map, and transform data pipelines going into cloud databases.
+"""
+categories = ["asynchronous", "network-programming"]
+keywords = ["etl", "database", "streaming", "serverless", "wasm"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-trait = "0.1.57"
