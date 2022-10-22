@@ -36,7 +36,7 @@ impl Transformer for Order {
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         if result.len() == 0 {
             // table doesn't exist, create a new one
-            conn.exec::<String, &str, ()>(r"CREATE TABLE orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50));", ())
+            conn.exec::<String, &str, ()>(r"CREATE TABLE orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50), date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP );", ())
                 .await
                 .map_err(|e| TransformerError::Custom(e.to_string()))?;
             log::debug!("create new table");

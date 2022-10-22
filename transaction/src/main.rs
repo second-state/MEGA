@@ -125,7 +125,7 @@ impl Transformer for Transaction {
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         if result.len() == 0 {
             // table doesn't exist, create a new one
-            conn.exec::<String, &str, ()>(r"CREATE TABLE transactions (from_address VARCHAR(50), to_address VARCHAR(50), value_usd VARCHAR(50), value_eth VARCHAR(50), gas FLOAT, confirmed BOOL);", ())
+            conn.exec::<String, &str, ()>(r"CREATE TABLE transactions (from_address VARCHAR(50), to_address VARCHAR(50), value_usd VARCHAR(50), value_eth VARCHAR(50), gas FLOAT, confirmed BOOL, date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);", ())
                     .await
                     .map_err(|e| TransformerError::Custom(e.to_string()))?;
             log::debug!("create new table");
