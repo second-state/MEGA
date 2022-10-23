@@ -68,6 +68,10 @@ pub trait Transformer {
     ) -> TransformerResult<()> {
         Err(TransformerError::Unimplemented.into())
     }
+
+    async fn init() -> TransformerResult<String> {
+        Err(TransformerError::Unimplemented.into())
+    }
 }
 
 async fn handle_request<T: Transformer>(
@@ -79,6 +83,19 @@ async fn handle_request<T: Transformer>(
         .await
         .unwrap()
         .to_vec();
+    match T::init().await {
+        Ok(sql_string) => {
+            let _ = conn
+                .lock()
+                .await
+                .exec::<String, String, ()>(sql_string, ())
+                .await;
+        }
+        Err(TransformerError::Unimplemented) => {}
+        Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
+        Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
+        Err(TransformerError::Skip) => return Ok(Response::new(Body::from("skip this data"))),
+    }
     match T::transform(content.clone()).await {
         Ok(sql_strings) => {
             // exec the query string

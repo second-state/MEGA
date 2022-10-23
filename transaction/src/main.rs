@@ -1,10 +1,6 @@
-use mega_etl::{
-    async_trait, params, Conn, Params, Pipe, Transformer, TransformerError, TransformerResult,
-};
-use mega_etl::{prelude::*, Row};
+use mega_etl::{async_trait, Pipe, Transformer, TransformerError, TransformerResult};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use std::time::{Duration, SystemTime};
@@ -32,18 +28,16 @@ lazy_static::lazy_static! {
 struct Transaction {
     from_address: String,
     to_address: String,
-    value_usd: String,
-    value_eth: String,
-    gas: f32,
+    value_usd: f64,
+    value_eth: u64,
+    gas: u64,
     confirmed: bool,
 }
 
 #[async_trait]
 impl Transformer for Transaction {
-    async fn transform_save(
-        inbound_data: Vec<u8>,
-        conn: Arc<Mutex<Conn>>,
-    ) -> TransformerResult<()> {
+    async fn transform(inbound_data: Vec<u8>) -> TransformerResult<Vec<String>> {
+        log::info!("Receive data.");
         let s = std::str::from_utf8(&inbound_data)
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let transaction: Value =
@@ -56,6 +50,11 @@ impl Transformer for Transaction {
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let value_eth = serde_json::from_value::<String>(transaction["value"].clone())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
+        if value_eth == "0" {
+            // ignore smart contracts
+            log::info!("Skip smart contract");
+            return Err(TransformerError::Skip);
+        }
         // get value in usd
         let now = SystemTime::now();
         let mut price = PRICE.lock().await;
@@ -67,8 +66,8 @@ impl Transformer for Transaction {
         {
             log::debug!("try to get eth price");
             let mut buf = Vec::new(); //container for body of a response
-            let api_key =
-                std::env::var("TI_API_KEY").map_err(|e| TransformerError::Custom(e.to_string()))?;
+            let api_key = std::env::var("PRICE_API_KEY")
+                .map_err(|e| TransformerError::Custom(e.to_string()))?;
             let res = http_req::request::get(
                 format!(
                     "https://api.etherscan.io/api?module=stats&action=ethprice&apikey={}",
@@ -101,12 +100,11 @@ impl Transformer for Transaction {
         price.price = Some(current_price);
         // release the lock
         drop(price);
-        let value_usd = value_eth
-            .clone()
-            .parse::<f64>()
+        let value_eth = value_eth
+            .parse::<u64>()
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
-        let value_usd = (value_usd / 1_000_000_000_000_000_000.0 * current_price).to_string();
-        let gas = serde_json::from_value::<f32>(transaction["gas"].clone())
+        let value_usd = value_eth as f64 / 1_000_000_000_000_000_000.0 * current_price;
+        let gas = serde_json::from_value::<u64>(transaction["gas"].clone())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let tx = Transaction {
             from_address,
@@ -117,104 +115,34 @@ impl Transformer for Transaction {
             confirmed: status == "confirmed",
         };
         log::info!("{:?}", tx);
-        let mut conn = conn.lock().await;
-        // check if table exist:
-        let result = conn
-            .exec::<String, &str, ()>(r"SHOW TABLES LIKE 'transactions';", ())
-            .await
-            .map_err(|e| TransformerError::Custom(e.to_string()))?;
-        if result.len() == 0 {
-            // table doesn't exist, create a new one
-            conn.exec::<String, &str, ()>(r"CREATE TABLE transactions (from_address VARCHAR(50), to_address VARCHAR(50), value_usd VARCHAR(50), value_eth VARCHAR(50), gas FLOAT, confirmed BOOL, date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);", ())
-                    .await
-                    .map_err(|e| TransformerError::Custom(e.to_string()))?;
-            log::debug!("create new table");
-        }
         log::debug!("before insert");
         if tx.confirmed {
-            // first check if there exists the pending record
-            let tx1 = tx.clone();
-            let result = conn.exec::<Row, String, Params>(
-                String::from(
-                    r"SELECT * FROM transactions WHERE from_address = :from_address AND to_address = :to_address AND value_eth = :value_eth AND gas = :gas;"
-                ),
-                params! {
-                    "from_address" => tx1.from_address,
-                    "to_address" => tx1.to_address,
-                    "value_eth" => tx1.value_eth,
-                    "gas" => tx1.gas,
-                },
-            )
-            .await
-            .map_err(|e| TransformerError::Custom(e.to_string()))?;
-            if result.len() == 0 {
-                log::debug!("Insert confirmed record");
-                // just insert
-                conn.exec::<String, String, Params>(
-                    String::from(
-                        r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed)
-                    VALUES (:from_address, :to_address, :value_usd, :value_eth, :gas, :confirmed)",
-                    ),
-                    params! {
-                        "from_address" => tx.from_address,
-                        "to_address" => tx.to_address,
-                        "value_usd" => tx.value_usd,
-                        "value_eth" => tx.value_eth,
-                        "gas" => tx.gas,
-                        "confirmed" => tx.confirmed
-                    },
-                )
-                .await
-                .map_err(|e| TransformerError::Custom(e.to_string()))?;
-            } else {
-                log::debug!("Update confirmed record");
-                // update existing record
-                conn.exec::<Row, String, Params>(
-                    String::from(
-                        r"UPDATE transactions SET confirmed = :confirmed
-                        WHERE from_address = :from_address AND to_address = :to_address AND value_eth = :value_eth AND gas = :gas;",
-                    ),
-                    params! {
-                        "from_address" => tx.from_address,
-                        "to_address" => tx.to_address,
-                        "value_eth" => tx.value_eth,
-                        "gas" => tx.gas,
-                        "confirmed" => tx.confirmed
-                    },
-                )
-                .await
-                .map_err(|e| TransformerError::Custom(e.to_string()))?;
-            }
+            let sql_string = format!(
+                r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?}) ON DUPLICATE KEY UPDATE confirmed=1;",
+                tx.from_address, tx.to_address, tx.value_usd, tx.value_eth, tx.gas, tx.confirmed
+            );
             log::debug!("insert successfully");
-            Ok(())
+            Ok(vec![sql_string])
         } else if status == "pending" {
             log::debug!("Insert pending record");
-
-            conn.exec::<String, String, Params>(
-                String::from(
-                    r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed)
-                VALUES (:from_address, :to_address, :value_usd, :value_eth, :gas, :confirmed)",
-                ),
-                params! {
-                    "from_address" => tx.from_address,
-                    "to_address" => tx.to_address,
-                    "value_usd" => tx.value_usd,
-                    "value_eth" => tx.value_eth,
-                    "gas" => tx.gas,
-                    "confirmed" => tx.confirmed
-                },
-            )
-            .await
-            .map_err(|e| TransformerError::Custom(e.to_string()))?;
+            let sql_string = format!(
+                r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?});",
+                tx.from_address, tx.to_address, tx.value_usd, tx.value_eth, tx.gas, tx.confirmed
+            );
             log::debug!("insert successfully");
-            Ok(())
+            Ok(vec![sql_string])
         } else {
             log::debug!("Skip other records");
-
             // failing cases
-            log::debug!("skip");
+            log::info!("Skip other records");
             Err(TransformerError::Skip)
         }
+    }
+
+    async fn init() -> TransformerResult<String> {
+        Ok(String::from(
+            r"CREATE TABLE transactions (from_address VARCHAR(50), to_address VARCHAR(50), value_usd FLOAT, value_eth BIGINT UNSIGNED, gas BIGINT UNSIGNED, confirmed BOOL, date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);",
+        ))
     }
 }
 
