@@ -46,7 +46,7 @@ The server log will appear in the `nohup.out` file.
 
 ## See it in action
 
-In another terminal window, you can send data to the webhook
+You can send data to the webhook using `curl`.
 
 ```bash
 curl http://localhost:3344/ -X POST -d @order.json
