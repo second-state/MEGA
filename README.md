@@ -66,20 +66,20 @@ struct Order {
 }
 ```
 
-Next, define the ETL `transform()` function that transforms inbound data into a SQL statement for the database. The inbound data is simply a byte array that is recived from any data source (e.g., a POST request on the web hook, or a message in Kafka). In this example, the inbound data is a JSON string that represents the `order`.
+Next, define the ETL `transform()` function that transforms inbound data into a set of SQL statements for the database. The inbound data is simply a byte array that is recived from any data source (e.g., a POST request on the web hook, or a message in Kafka). In this example, the inbound data is a JSON string that represents the `order`.
 
 ```rust
 #[async_trait]
 impl Transformer for Order {
-    async fn transform(inbound_data: Vec<u8>) -> TransformerResult<String> {
+    async fn transform(inbound_data: Vec<u8>) -> TransformerResult<Vec<String>> {
         let s = std::str::from_utf8(&inbound_data)
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let order: Order = serde_json::from_str(String::from(s).as_str())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
-        dbg!(&order);
-        
+        log::info!("{:?}", &order);
+        let mut ret = vec![];
         let sql_string = format!(
-            r"INSERT INTO orders VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?});",
+            r"INSERT INTO orders VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, CURRENT_TIMESTAMP);",
             order.order_id,
             order.product_id,
             order.quantity,
@@ -88,8 +88,9 @@ impl Transformer for Order {
             order.tax,
             order.shipping_address,
         );
-
-        Ok(sql_string)
+        dbg!(sql_string.clone());
+        ret.push(sql_string);
+        Ok(ret)
     }
 }
 ```
@@ -113,10 +114,12 @@ async fn main() -> anyhow::Result<()> {
 Optionally, you can define an `init()` function. It will be executed the first time when the ETL starts up. Here, we use the `init()` to create and empty `orders` table in the database.
 
 ```rust
+#[async_trait]
 impl Transformer for Order {
     async fn init() -> TransformerResult<String> {
-        let sql_string = "DROP TABLE IF EXISTS orders; CREATE TABLE orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(20));";
-        Ok(sql_string)
+        Ok(String::from(
+            r"CREATE TABLE IF NOT EXISTS orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50), date_registered TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
+        ))
     }
 }
 ```

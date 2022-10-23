@@ -22,7 +22,7 @@ impl Transformer for Order {
         log::info!("{:?}", &order);
         let mut ret = vec![];
         let sql_string = format!(
-            r"INSERT INTO orders VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?});",
+            r"INSERT INTO orders VALUES ({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}, CURRENT_TIMESTAMP);",
             order.order_id,
             order.product_id,
             order.quantity,
@@ -31,13 +31,14 @@ impl Transformer for Order {
             order.tax,
             order.shipping_address,
         );
+        dbg!(sql_string.clone());
         ret.push(sql_string);
         Ok(ret)
     }
 
     async fn init() -> TransformerResult<String> {
         Ok(String::from(
-            r"CREATE TABLE IF NOT EXISTS orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50), date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);",
+            r"CREATE TABLE IF NOT EXISTS orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50), date_registered TIMESTAMP DEFAULT CURRENT_TIMESTAMP);",
         ))
     }
 }
