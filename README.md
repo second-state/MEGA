@@ -8,6 +8,12 @@ ETL tools are crucial for the modern data analytics pipeline. However, ETL for c
 
 With the MEGA framework, developers will be able to create secure, lightweight, fast and cross-platform ETL functions that are located close to or even embedded in cloud databases' infrastructure. The MEGA ETL functions can be deployed as serverless functions and receive data from a variety of sources including event queues, webhook callbacks and data streaming pipelines. The outcomes are written into the designated cloud database for later analysis.
 
+## Examples
+
+* [examples/order](examples/order) is an example to take orders from an e-commerce application and store them in a database. It is the example we will go through in this document.
+* [examples/order_conn](examples/order_conn) is the order example implemented in an alternative way -- it uses a direct connection to the backend database for more flexibility.
+* [examples/ethereum] is an example to filter, transform, and store Ethereum transactions in a relational database.
+
 ## Prerequisites
 
 The [WasmEdge](https://github.com/WasmEdge) WebAssembly Runtime is an open source project under the CNCF. It provides a safer and lighter alternative than Linux containers to run compiled (i.e., high-performance) ETL functions. They can be deployed to the edge cloud close to the data source or even colocate with the cloud database servers in the same firewall. Specially, you will need
@@ -88,7 +94,7 @@ impl Transformer for Order {
 }
 ```
 
-Finally, in the main application we will configure a inbound data source (a webhook at `http://localhost:8080`) and an outbound database (a TiDB Cloud instance).
+Finally, in the main application we will configure an outbound database (a cloud database instance specified in `uri`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue.
 
 ```bash
 #[tokio::main(flavor = "current_thread")]
@@ -100,7 +106,7 @@ async fn main() -> anyhow::Result<()> {
         Ok(uri) => uri,
         Err(_) => "mysql://userID:pass@gateway01.us-west-2.prod.aws.tidbcloud.com:4000/test".into(),
     };
-    let mut pipe = Pipe::new(uri, "127.0.0.1:8080".to_string()).await;
+    let mut pipe = Pipe::new(uri, "http://0.0.0.0:3344".to_string()).await;
 
     // This is async because this calls the async transform() function in Order
     pipe.start::<Order>().await?;
@@ -130,7 +136,7 @@ cargo build --target wasm32-wasi --release
 Optionally, you could AOT compile it to improve performance (could be 100x faster for compute-intensive ETL functions).
 
 ```bash
-wasmedgec target/wasm32-wasi/release/order_demo.wasm order_demo.wasm
+wasmedgec target/wasm32-wasi/release/order.wasm order.wasm
 ```
 
 ## Run
@@ -140,13 +146,13 @@ With WasmEdge, you have many deployment options. You could run the compiled ETL 
 But in this example, we will just use the good old `wasmedge` CLI tool to run the ETL function-as-a-service.
 
 ```bash
-wasmedge order_demo.wasm
+wasmedge order.wasm
 ```
 
 It starts an HTTP server on port 8080 and waits for the inbound data. Open another terminal, and send it some inbound data via `curl`.
 
 ```bash
-curl http://localhost:8080/ -X POST -d @order.json
+curl http://localhost:3344/ -X POST -d @order.json
 ```
 
 The JSON data in `order.json` is sent to the ETL `transform()` function as inbound data. The function parses it and generates the SQL string, which is automatically executed on the connected TiDB Cloud instance. You can now connect to TiDB Cloud from your database browser and see the `order` record in the database.
