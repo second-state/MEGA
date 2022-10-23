@@ -94,18 +94,14 @@ impl Transformer for Order {
 }
 ```
 
-Finally, in the main application we will configure an outbound database (a cloud database instance specified in `uri`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue or a Redis table.
+Finally, in the main application we will configure an outbound database (a cloud database instance specified in `DATABASE_URL`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue or a Redis table.
 
 ```bash
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    // can use builder later
-    let uri = match std::env::var("DATABASE_URL") {
-        Ok(uri) => uri,
-        Err(_) => "mysql://userID:pass@gateway01.us-west-2.prod.aws.tidbcloud.com:4000/test".into(),
-    };
+    let uri = std::env::var("DATABASE_URL")?;
     let mut pipe = Pipe::new(uri, "http://0.0.0.0:3344".to_string()).await;
 
     // This is async because this calls the async transform() function in Order
