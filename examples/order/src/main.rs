@@ -34,6 +34,12 @@ impl Transformer for Order {
         ret.push(sql_string);
         Ok(ret)
     }
+
+    async fn init() -> TransformerResult<String> {
+        Ok(String::from(
+            r"CREATE TABLE IF NOT EXISTS orders (order_id INT, product_id INT, quantity INT, amount FLOAT, shipping FLOAT, tax FLOAT, shipping_address VARCHAR(50), date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);",
+        ))
+    }
 }
 
 #[tokio::main(flavor = "current_thread")]
