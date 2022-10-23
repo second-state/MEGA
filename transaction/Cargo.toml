@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
-mega_etl = {path = "../mega_etl", version = "0.1.0"}
+mega_etl = {path = "../mega_etl", version = "0.1"}
 tokio_wasi = {version = '1.21', features = ["rt", "macros"]}
 env_logger = "0.9"
 log  = "0.4"
