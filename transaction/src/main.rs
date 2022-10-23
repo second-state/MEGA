@@ -26,10 +26,11 @@ lazy_static::lazy_static! {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Transaction {
+    hash: String,
     from_address: String,
     to_address: String,
     value_usd: f64,
-    value_eth: u64,
+    value_eth: f64,
     gas: u64,
     confirmed: bool,
 }
@@ -43,6 +44,8 @@ impl Transformer for Transaction {
         let transaction: Value =
             serde_json::from_str(s).map_err(|e| TransformerError::Custom(e.to_string()))?;
         let status = serde_json::from_value::<String>(transaction["status"].clone())
+            .map_err(|e| TransformerError::Custom(e.to_string()))?;
+        let hash = serde_json::from_value::<String>(transaction["hash"].clone())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let from_address = serde_json::from_value::<String>(transaction["from"].clone())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
@@ -101,12 +104,14 @@ impl Transformer for Transaction {
         // release the lock
         drop(price);
         let value_eth = value_eth
-            .parse::<u64>()
+            .parse::<f64>()
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
-        let value_usd = value_eth as f64 / 1_000_000_000_000_000_000.0 * current_price;
+        let value_eth = value_eth / 1_000_000_000_000_000_000.0;
+        let value_usd = value_eth * current_price;
         let gas = serde_json::from_value::<u64>(transaction["gas"].clone())
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let tx = Transaction {
+            hash,
             from_address,
             to_address,
             value_eth,
@@ -118,16 +123,28 @@ impl Transformer for Transaction {
         log::debug!("before insert");
         if tx.confirmed {
             let sql_string = format!(
-                r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?}) ON DUPLICATE KEY UPDATE confirmed=1;",
-                tx.from_address, tx.to_address, tx.value_usd, tx.value_eth, tx.gas, tx.confirmed
+                r"INSERT INTO transactions (hash, from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?}) ON DUPLICATE KEY UPDATE confirmed=1;",
+                tx.hash,
+                tx.from_address,
+                tx.to_address,
+                tx.value_usd,
+                tx.value_eth,
+                tx.gas,
+                tx.confirmed
             );
             log::debug!("insert successfully");
             Ok(vec![sql_string])
         } else if status == "pending" {
             log::debug!("Insert pending record");
             let sql_string = format!(
-                r"INSERT INTO transactions (from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?});",
-                tx.from_address, tx.to_address, tx.value_usd, tx.value_eth, tx.gas, tx.confirmed
+                r"INSERT INTO transactions (hash, from_address, to_address, value_usd, value_eth, gas, confirmed) VALUES({:?}, {:?}, {:?}, {:?}, {:?}, {:?}, {:?});",
+                tx.hash,
+                tx.from_address,
+                tx.to_address,
+                tx.value_usd,
+                tx.value_eth,
+                tx.gas,
+                tx.confirmed
             );
             log::debug!("insert successfully");
             Ok(vec![sql_string])
@@ -141,7 +158,7 @@ impl Transformer for Transaction {
 
     async fn init() -> TransformerResult<String> {
         Ok(String::from(
-            r"CREATE TABLE transactions (from_address VARCHAR(50), to_address VARCHAR(50), value_usd FLOAT, value_eth BIGINT UNSIGNED, gas BIGINT UNSIGNED, confirmed BOOL, date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);",
+            r"CREATE TABLE IF NOT EXISTS transactions (hash VARCHAR(80), from_address VARCHAR(50), to_address VARCHAR(50), value_usd FLOAT, value_eth FLOAT, gas BIGINT UNSIGNED, confirmed BOOL, date_registered TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (hash));",
         ))
     }
 }
