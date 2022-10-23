@@ -12,7 +12,7 @@ With the MEGA framework, developers will be able to create secure, lightweight, 
 
 * [examples/order](examples/order) is an example to take orders from an e-commerce application and store them in a database. It is the example we will go through in this document.
 * [examples/order_conn](examples/order_conn) is the order example implemented in an alternative way -- it uses a direct connection to the backend database for more flexibility.
-* [examples/ethereum] is an example to filter, transform, and store Ethereum transactions in a relational database.
+* [examples/ethereum](examples/ethereum) is an example to filter, transform, and store Ethereum transactions in a relational database.
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ impl Transformer for Order {
 }
 ```
 
-Finally, in the main application we will configure an outbound database (a cloud database instance specified in `uri`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue.
+Finally, in the main application we will configure an outbound database (a cloud database instance specified in `uri`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue or a Redis table.
 
 ```bash
 #[tokio::main(flavor = "current_thread")]
