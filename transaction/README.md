@@ -47,7 +47,7 @@ You can use the `wasmedge` command to run the `wasm` application. It will start 
 nohup wasmedge --env DATABASE_URL=mysql://user:pass@gateway01.us-west-2.prod.aws.tidbcloud.com:4000/demo --env PRICE_API_KEY=ABCD1234 --env RUST_LOG=info transaction.wasm 2>&1 &
 ```
 
-Once the server is running and listening at the `3344` port, go to the [Blocknative mempool API console you signed up for](https://www.blocknative.com/api), and enter the ETL function's URL (e.g., `http://my-aws-ec2.ip;3344/`) as the webhook URL.
+Once the server is running and listening at the `3344` port, go to the [Blocknative mempool API console you signed up for](https://www.blocknative.com/api), and enter the ETL function's URL (e.g., `http://my-aws-ec2.ip:3344/`) as the webhook URL.
 
 ## See it in action
 
