@@ -1,6 +1,6 @@
 # A serverless ETL runtime for cloud databases
 
-MEGA stands for **Make ETLs Great Again!**
+MEGA stands for **Make ETLs Great Again!** [Checkout a video demo!](https://www.youtube.com/watch?v=sQCRQeTnBgo)
 
 This project is a cloud-native ETL (Extract, Transform, Load) application framework based on the [WasmEdge](https://github.com/WasmEdge) WebAssembly runtime for developers to filter, map, and transform data pipelines going into cloud databases. We are currently targetting the [TiDB Cloud](https://tidbcloud.com/) as the backend database.
 
