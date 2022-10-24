@@ -83,19 +83,7 @@ async fn handle_request<T: Transformer>(
         .await
         .unwrap()
         .to_vec();
-    match T::init().await {
-        Ok(sql_string) => {
-            let _ = conn
-                .lock()
-                .await
-                .exec::<String, String, ()>(sql_string, ())
-                .await;
-        }
-        Err(TransformerError::Unimplemented) => {}
-        Err(TransformerError::Custom(err)) => return Ok(Response::new(Body::from(err))),
-        Err(TransformerError::Unknown) => return Ok(Response::new(Body::from("Unknown error"))),
-        Err(TransformerError::Skip) => return Ok(Response::new(Body::from("skip this data"))),
-    }
+
     match T::transform(content.clone()).await {
         Ok(sql_strings) => {
             // exec the query string
@@ -158,6 +146,21 @@ impl Pipe {
     }
 
     pub async fn start<T: Transformer + 'static>(&mut self) -> TransformerResult<()> {
+        // init the table
+        match T::init().await {
+            Ok(sql_string) => {
+                let mut conn = self
+                    .mysql_conn
+                    .get_conn()
+                    .await
+                    .map_err(|e| TransformerError::Custom(e.to_string()))?;
+                let _ = conn
+                    .exec::<String, String, ()>(sql_string, ())
+                    .await
+                    .map_err(|e| TransformerError::Custom(e.to_string()))?;
+            }
+            Err(e) => return Err(e),
+        }
         let uri = self.connector_uri.as_ref().unwrap();
         match DataSource::parse_uri(uri).map_err(|e| TransformerError::Custom(e.to_string()))? {
             DataSource::Hyper(addr, port) => {
