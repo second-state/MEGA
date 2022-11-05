@@ -37,7 +37,7 @@ struct Transaction {
 
 #[async_trait]
 impl Transformer for Transaction {
-    async fn transform(inbound_data: Vec<u8>) -> TransformerResult<Vec<String>> {
+    async fn transform(inbound_data: &Vec<u8>) -> TransformerResult<Vec<String>> {
         log::info!("Receive data.");
         let s = std::str::from_utf8(&inbound_data)
             .map_err(|e| TransformerError::Custom(e.to_string()))?;

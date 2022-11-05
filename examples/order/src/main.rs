@@ -14,7 +14,7 @@ struct Order {
 
 #[async_trait]
 impl Transformer for Order {
-    async fn transform(inbound_data: Vec<u8>) -> TransformerResult<Vec<String>> {
+    async fn transform(inbound_data: &Vec<u8>) -> TransformerResult<Vec<String>> {
         let s = std::str::from_utf8(&inbound_data)
             .map_err(|e| TransformerError::Custom(e.to_string()))?;
         let order: Order = serde_json::from_str(String::from(s).as_str())
@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
 
     // can use builder later
     let uri = std::env::var("DATABASE_URL")?;
-    let mut pipe = Pipe::new(uri, "http://0.0.0.0:3344".to_string()).await;
+    let mut pipe = Pipe::new(uri, "kafka://127.0.0.1:9092/order".to_string()).await;
 
     // This is async because this calls the async transform() function in Order
     pipe.start::<Order>().await?;

@@ -21,7 +21,7 @@ struct Order {
 #[async_trait]
 impl Transformer for Order {
     async fn transform_save(
-        inbound_data: Vec<u8>,
+        inbound_data: &Vec<u8>,
         conn: Arc<Mutex<Conn>>,
     ) -> TransformerResult<()> {
         let s = std::str::from_utf8(&inbound_data)
