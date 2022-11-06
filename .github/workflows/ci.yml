@@ -57,6 +57,7 @@ jobs:
     - name: Run the webhook ETL service on MySQL
       run: |
         cd examples/order
+        cargo clean
         cargo build --target wasm32-wasi --release
         wasmedgec ../../target/wasm32-wasi/release/order.wasm order.wasm
         nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" order.wasm &
@@ -79,6 +80,7 @@ jobs:
     - name: Run the Redpanda ETL service on MySQL
       run: |
         cd examples/kafka
+        cargo clean
         cargo build --target wasm32-wasi --release
         wasmedgec ../../target/wasm32-wasi/release/kafka.wasm kafka.wasm
         nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" kafka.wasm &
@@ -88,10 +90,11 @@ jobs:
     - name: Test the Redpanda ETL service
       run: |
         cd examples/kafka
-        echo $'\nCreate a queue topic'
-        rpk topic create order
+        # echo $'\nCreate a queue topic'
+        # rpk topic create order
         echo $'\nSend an order'
         cat order.json | rpk topic produce order
+        sleep 5
         echo $'\nQuery DB'
         mysql -u root -proot mysql -e "select * from orders"
         echo $'\Delete DB'
