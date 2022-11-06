@@ -81,7 +81,7 @@ jobs:
         cd examples/kafka
         cargo build --target wasm32-wasi --release
         wasmedgec ../../target/wasm32-wasi/release/kafka.wasm kafka.wasm
-        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" order.wasm &
+        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" kafka.wasm &
         echo $! > wasmedge.pid
         sleep 15
         
