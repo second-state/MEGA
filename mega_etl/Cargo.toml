@@ -24,3 +24,4 @@ anyhow = "1.0.65"
 tokio_wasi = {version = "1.21", features = ["net"]}
 log = "0.4.17"
 rskafka = {git = "https://github.com/MediosZ/rskafka.git", branch="add-wasi"}
+futures-util = "0.3"

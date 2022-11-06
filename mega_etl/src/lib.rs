@@ -1,16 +1,22 @@
 pub use async_trait::async_trait;
+use futures_util::StreamExt;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::Server;
 use hyper::{Body, Request, Response};
 pub use mysql_async::prelude::*;
 pub use mysql_async::*;
-use rskafka::client::{partition::UnknownTopicHandling, ClientBuilder};
+use rskafka::client::{
+    consumer::{StartOffset, StreamConsumerBuilder},
+    partition::UnknownTopicHandling,
+    ClientBuilder,
+};
 use std::convert::Infallible;
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::Mutex;
 use url::Url;
+
 #[derive(Error, Debug)]
 pub enum TransformerError {
     #[error("function is unimplemented")]
@@ -25,9 +31,21 @@ pub enum TransformerError {
 
 pub type TransformerResult<T> = std::result::Result<T, TransformerError>;
 
-fn to_transformer_error(error: impl std::error::Error) -> TransformerError {
-    TransformerError::Custom(error.to_string())
+macro_rules! impl_from_transformer_error {
+    ($error:ty) => {
+        impl From<$error> for TransformerError {
+            fn from(value: $error) -> Self {
+                TransformerError::Custom(value.to_string())
+            }
+        }
+    };
 }
+
+impl_from_transformer_error!(rskafka::client::error::Error);
+impl_from_transformer_error!(mysql_async::Error);
+impl_from_transformer_error!(mysql_async::ParseError);
+impl_from_transformer_error!(std::io::Error);
+impl_from_transformer_error!(hyper::Error);
 
 enum DataSource {
     Hyper(String, u16),
@@ -222,25 +240,15 @@ impl Pipe {
         // init the table
         match T::init().await {
             Ok(sql_string) => {
-                let mut conn = self
-                    .mysql_conn
-                    .get_conn()
-                    .await
-                    .map_err(to_transformer_error)?;
-                let _ = conn
-                    .exec::<String, String, ()>(sql_string, ())
-                    .await
-                    .map_err(to_transformer_error)?;
+                let mut conn = self.mysql_conn.get_conn().await?;
+                let _ = conn.exec::<String, String, ()>(sql_string, ()).await?;
             }
             Err(e) => return Err(e),
         }
         let uri = self.connector_uri.as_ref().unwrap();
-        match DataSource::parse_uri(uri).map_err(to_transformer_error)? {
+        match DataSource::parse_uri(uri)? {
             DataSource::Hyper(addr, port) => {
-                let addr = (addr, port)
-                    .to_socket_addrs()
-                    .map_err(to_transformer_error)?
-                    .nth(0);
+                let addr = (addr, port).to_socket_addrs()?.nth(0);
                 let addr = if addr.is_none() {
                     return Err(TransformerError::Custom("Empty addr".into()));
                 } else {
@@ -250,9 +258,7 @@ impl Pipe {
                 let make_svc = make_service_fn(|_| {
                     let pool = self.mysql_conn.clone();
                     async move {
-                        let conn = Arc::new(Mutex::new(
-                            pool.get_conn().await.map_err(to_transformer_error).unwrap(),
-                        ));
+                        let conn = Arc::new(Mutex::new(pool.get_conn().await.unwrap()));
                         Ok::<_, Infallible>(service_fn(move |req| {
                             let conn = conn.clone();
                             handle_request::<T>(req, conn)
@@ -260,47 +266,42 @@ impl Pipe {
                     }
                 });
                 let server = Server::bind(&addr).serve(make_svc);
-                server.await.map_err(to_transformer_error)?;
+                server.await?;
                 Ok(())
             }
             DataSource::Kafka(host, port, topic) => {
                 log::debug!("{} {} {}", host, port, topic);
                 let connection = format!("{}:{}", host, port);
-                let client = ClientBuilder::new(vec![connection])
-                    .build()
-                    .await
-                    .map_err(to_transformer_error)?;
+                let client = ClientBuilder::new(vec![connection]).build().await?;
 
-                let partition_client = client
-                    .partition_client(
-                        topic,
-                        0, // partition
-                        UnknownTopicHandling::Retry,
-                    )
-                    .await
-                    .map_err(to_transformer_error)?;
-
-                let (mut records, _high_watermark) = partition_client
-                    .fetch_records(
-                        0,            // offset
-                        1..1_000_000, // min..max bytes
-                        1_000_000,    // max wait time
-                    )
-                    .await
-                    .map_err(to_transformer_error)?;
-                for record in records.iter_mut() {
+                let partition_client = Arc::new(
+                    client
+                        .partition_client(
+                            topic,
+                            0, // partition
+                            UnknownTopicHandling::Retry,
+                        )
+                        .await?,
+                );
+                let mut stream =
+                    StreamConsumerBuilder::new(Arc::clone(&partition_client), StartOffset::Latest)
+                        .with_max_wait_ms(500)
+                        .build();
+                // use loop to listen incoming records.
+                loop {
+                    log::debug!("wait a record");
+                    let (mut record, _high_watermark) = stream
+                        .next()
+                        .await
+                        .ok_or(TransformerError::Custom("kafka stream return error".into()))??;
                     if let Some(incoming_data) = record.record.value.take() {
-                        let conn = Arc::new(Mutex::new(
-                            self.mysql_conn
-                                .get_conn()
-                                .await
-                                .map_err(to_transformer_error)?,
-                        ));
+                        log::debug!("get a record");
+                        let conn = Arc::new(Mutex::new(self.mysql_conn.get_conn().await?));
                         kafka_handle_request::<T>(incoming_data, conn).await?;
+                    } else {
+                        log::debug!("skip empty kafka record");
                     }
                 }
-
-                Ok(())
             }
             DataSource::Redis => Err(TransformerError::Unimplemented),
             DataSource::Unknown => Err(TransformerError::Custom("Unknown data source".to_string())),
