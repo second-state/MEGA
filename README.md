@@ -2,7 +2,7 @@
 
 MEGA stands for **Make ETLs Great Again!** [Checkout a video demo!](https://www.youtube.com/watch?v=sQCRQeTnBgo)
 
-This project is a cloud-native ETL (Extract, Transform, Load) application framework based on the [WasmEdge](https://github.com/WasmEdge) WebAssembly runtime for developers to filter, map, and transform data pipelines going into cloud databases. We are currently targetting the [TiDB Cloud](https://tidbcloud.com/) as the backend database.
+This project is a cloud-native ETL (Extract, Transform, Load) application framework based on the [WasmEdge](https://github.com/WasmEdge) WebAssembly runtime for developers to filter, map, and transform data pipelines going into cloud databases. We are currently targetting any MySQL compatible database as the backend.
 
 ETL tools are crucial for the modern data analytics pipeline. However, ETL for cloud databases has its own challenges. Since the public cloud is fundamentally a multi-tenancy environment, all user-defined ETL functions are isolated outside of the database in separate VMs or secure containers. That is a complex and heavyweight setup, which is not suited for simple functions that need to process sporadic streams of data. 
 
@@ -10,8 +10,8 @@ With the MEGA framework, developers will be able to create secure, lightweight, 
 
 ## Examples
 
-* [examples/order](examples/order) is an example to take orders from an e-commerce application and store them in a database. It is the example we will go through in this document.
-* [examples/order_conn](examples/order_conn) is the order example implemented in an alternative way -- it uses a direct connection to the backend database for more flexibility.
+* [examples/order](examples/order) is an example to take orders from an e-commerce application via a HTTP webhook, and store the orders into a database. It is the example we will go through in this document. There is also [an alternative implementation](examples/order_conn) for this example -- it uses a direct connection to the backend database for more flexibility.
+* [examples/kafka](examples/kafka) is an example to take those e-commerce orders from a Kafka / Redpanda queue, and store the orders into a database.
 * [examples/ethereum](examples/ethereum) is an example to filter, transform, and store Ethereum transactions in a relational database.
 
 ## Prerequisites
@@ -20,7 +20,7 @@ The [WasmEdge](https://github.com/WasmEdge) WebAssembly Runtime is an open sourc
 
 * [Install Rust](https://www.rust-lang.org/tools/install). The framework is currently written in the Rust language. A JavaScript version is in the works.
 * [Install WasmEdge](https://wasmedge.org/book/en/quick_start/install.html). You need it to run the ETL functions.
-* [Sign up for TiDB Cloud](https://tidbcloud.com/). The ETL transformed data is written into this database for later analysis.
+* Install a MySQL compatible analytical database or sign up for a cloud database. We recommend [TiDB Cloud](https://tidbcloud.com/). The ETL transformed data is written into this database for later analysis.
 
 On Linux, you can use the following commands to install Rust and WasmEdge.
 
@@ -95,7 +95,7 @@ impl Transformer for Order {
 }
 ```
 
-Finally, in the main application we will configure an outbound database (a cloud database instance specified in `DATABASE_URL`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a Kafka queue or a Redis table.
+Finally, in the main application we will configure an outbound database (a cloud database instance specified in `DATABASE_URL`) and an inbound data source (a webhook at `http://my.ip:3344`). Other inbound methods are also supported. For example, you can configure the ETL function to receive messages from a [Kafka or Redpanda queue](examples/kafka) or a Redis table.
 
 ```bash
 #[tokio::main(flavor = "current_thread")]
