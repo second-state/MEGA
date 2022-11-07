@@ -47,16 +47,12 @@ The server log will appear in the `nohup.out` file.
 
 ## See it in action
 
-First create a topic for a queue called `order` using the Redpanda command line tool `rpk`. The ETL application is configured to listen for events from the `order` topic.
-
-```bash
-rpk topic create order
-```
-
-Then you can produce data from the `order` topic using `rpk`.
+The ETL program (i.e., the server from above) has already created and connected to the `order` queue in Redpanda when it started. You can produce data from the `order` topic using the [rpk](https://docs.redpanda.com/docs/platform/quickstart/rpk-install/) CLI tool. The ETL program will receive the data from the queue, parse it, process it, and save it to the database.
 
 ```bash
 cat order.json | rpk topic produce order
 ```
+
+> You can also use the `rpk` command to create a new topic for the ETL program to listen to. Just do `rpk topic create new-topic-name`.
 
 You can now log into the database to see the `orders` table and its content.
