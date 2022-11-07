@@ -135,7 +135,7 @@ cargo build --target wasm32-wasi --release
 Optionally, you could AOT compile it to improve performance (could be 100x faster for compute-intensive ETL functions).
 
 ```bash
-wasmedgec ../../target/wasm32-wasi/release/order.wasm order.wasm
+wasmedgec target/wasm32-wasi/release/order.wasm order.wasm
 ```
 
 ## Run
@@ -145,10 +145,10 @@ With WasmEdge, you have many deployment options. You could run the compiled ETL 
 But in this example, we will just use the good old `wasmedge` CLI tool to run the ETL function-as-a-service.
 
 ```bash
-wasmedge --env DATABASE_URL=mysql://user:pass@ip.address:3366/mysql order.wasm
+wasmedge --env DATABASE_URL=mysql://user:pass@ip.address:3306/mysql order.wasm
 ```
 
-It starts an HTTP server on port 8080 and waits for the inbound data. Open another terminal, and send it some inbound data via `curl`.
+It starts an HTTP server on port 3344 and waits for the inbound data. Open another terminal, and send it some inbound data via `curl`.
 
 ```bash
 curl http://localhost:3344/ -X POST -d @order.json

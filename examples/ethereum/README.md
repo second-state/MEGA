@@ -35,7 +35,7 @@ cargo build --target wasm32-wasi --release
 You can run the AOT compiler on the `wasm` file. It could significantly improvement the performance of compute-intensive applications. This microservice, however, is a network intensitive application. Our use of async HTTP networking (Tokio and hyper) and async MySQL connectors are crucial for the performance of this microservice.
 
 ```bash
-wasmedgec ../../target/wasm32-wasi/release/transaction.wasm transaction.wasm
+wasmedgec target/wasm32-wasi/release/transaction.wasm transaction.wasm
 ```
 
 ## Run

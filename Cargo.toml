@@ -1,8 +1,0 @@
-[workspace]
-members = [
-    "mega_etl",
-    "examples/ethereum",
-    "examples/order",
-    "examples/order_conn",
-    "examples/kafka"
-]

@@ -1,0 +1,18 @@
+services:
+  etl:
+    image: etl-webhook
+    build:
+      context: .
+      platforms:
+        - wasi/wasm32
+    ports:
+      - 3344:3344
+    environment:
+      DATABASE_URL: mysql://root:whalehello@db:3306/mysql
+      RUST_BACKTRACE: full
+    restart: unless-stopped
+    runtime: io.containerd.wasmedge.v1
+  db:
+    image: mariadb:10.9
+    environment:
+      MYSQL_ROOT_PASSWORD: whalehello
