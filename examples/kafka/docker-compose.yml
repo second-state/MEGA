@@ -24,12 +24,10 @@ services:
         - wasi/wasm32
     environment:
       DATABASE_URL: mysql://root:whalehello@db:3306/mysql
-      KAFKA_URL: kafka://127.0.0.1:9092/order
+      KAFKA_URL: kafka://redpanda:9092/order
       RUST_BACKTRACE: full
     restart: unless-stopped
     runtime: io.containerd.wasmedge.v1
-    depends_on:
-      - "redpanda"
   db:
     image: mariadb:10.9
     environment:
