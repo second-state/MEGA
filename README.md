@@ -145,7 +145,7 @@ With WasmEdge, you have many deployment options. You could run the compiled ETL 
 But in this example, we will just use the good old `wasmedge` CLI tool to run the ETL function-as-a-service.
 
 ```bash
-wasmedge --env DATABASE_URL=mysql://user:pass@ip.address:3306/mysql order.wasm
+wasmedge --env "DATABASE_URL=mysql://user:pass@ip.address:3306/mysql" order.wasm
 ```
 
 It starts an HTTP server on port 3344 and waits for the inbound data. Open another terminal, and send it some inbound data via `curl`.

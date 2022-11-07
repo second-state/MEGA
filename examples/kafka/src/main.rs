@@ -48,8 +48,9 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     // can use builder later
-    let uri = std::env::var("DATABASE_URL")?;
-    let mut pipe = Pipe::new(uri, "kafka://127.0.0.1:9092/order".to_string()).await;
+    let database_uri = std::env::var("DATABASE_URL")?;
+    let kafka_uri = std::env::var("KAFKA_URL")?;
+    let mut pipe = Pipe::new(database_uri, kafka_uri).await;
 
     // This is async because this calls the async transform() function in Order
     pipe.start::<Order>().await?;

@@ -39,7 +39,7 @@ wasmedgec target/wasm32-wasi/release/order.wasm order.wasm
 You can use the `wasmedge` command to run the `wasm` application. It will start the server. Make sure that you pass the `DATABASE_URL` that points to your running MySQL server.
 
 ```bash
-nohup wasmedge --env DATABASE_URL=mysql://user:pass@ip.address:3306/mysql order.wasm 2>&1 &
+nohup wasmedge --env "DATABASE_URL=mysql://user:pass@ip.address:3306/mysql" order.wasm 2>&1 &
 ```
 
 The server log will appear in the `nohup.out` file.
