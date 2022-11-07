@@ -76,6 +76,7 @@ jobs:
         echo $'\nDone!'
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
+        cat nohup.out
 
     - name: Run the Redpanda ETL service on MySQL
       run: |
@@ -102,5 +103,6 @@ jobs:
         echo $'\nDone!'
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
+        cat nohup.out
 
     
