@@ -1,31 +1,5 @@
 # WasmEdge ETL function example for Redpanda / Kafka
 
-## Quickstart with Docker
-
-The easiest way to get started is to use a version of Docker Desktop or Docker CLI with Wasm support.
-
-* [Install Docker Desktop + Wasm (Beta)](https://docs.docker.com/desktop/wasm/)
-* [Install Docker CLI + Wasm](https://github.com/chris-crone/wasm-day-na-22/tree/main/server)
-
-Then, you just need to type one command.
-
-```bash
-docker compose up
-```
-
-This will build the Rust source code, run the Wasm server for the ETL function, and startup contaniners for a Redpanda server and a MySQL backing database. You can then use [the curl commands](#see-it-in-action) to send data to the Redpanda queue topic for the ETL.
-
-To see the data in the database container, you can use the following commands.
-
-```bash
-docker compose exec db /bin/bash
-root@c97c472db02e:/# mysql -u root -pwhalehello mysql
-mysql> select * from orders;
-... ...
-```
-
-However, if you want to build and run the app step by step on your own system. Follow the detailed instructions below.
-
 ## Prerequisites
 
 * [Install Rust](https://www.rust-lang.org/tools/install). The framework is currently written in the Rust language. A JavaScript version is in the works.
@@ -82,3 +56,27 @@ cat order.json | rpk topic produce order
 > You can also use the `rpk` command to create a new topic for the ETL program to listen to. Just do `rpk topic create order`.
 
 You can now log into the database to see the `orders` table and its content.
+
+## Docker
+
+With WasmEdge support in Docker, you can also use Docker Compose to build and start this multi-container application in a single command without installing any dependencies.
+
+* [Install Docker Desktop + Wasm (Beta)](https://docs.docker.com/desktop/wasm/)
+* or [Install Docker CLI + Wasm](https://github.com/chris-crone/wasm-day-na-22/tree/main/server)
+
+Then, you just need to type one command.
+
+```bash
+docker compose up
+```
+
+This will build the Rust source code, run the Wasm server for the ETL function, and startup contaniners for a Redpanda server and a MySQL backing database. You can then use [the curl commands](#see-it-in-action) to send data to the Redpanda queue topic for the ETL.
+
+To see the data in the database container, you can use the following commands.
+
+```bash
+docker compose exec db /bin/bash
+root@c97c472db02e:/# mysql -u root -pwhalehello mysql
+mysql> select * from orders;
+... ...
+```
