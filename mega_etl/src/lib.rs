@@ -272,7 +272,16 @@ impl Pipe {
             DataSource::Kafka(host, port, topic) => {
                 log::debug!("{} {} {}", host, port, topic);
                 let connection = format!("{}:{}", host, port);
-                let client = ClientBuilder::new(vec![connection]).build().await?;
+                let timeout = tokio::time::timeout(
+                    std::time::Duration::from_secs(3),
+                    ClientBuilder::new(vec![connection]).build(),
+                )
+                .await;
+                let client = if let Ok(client) = timeout {
+                    client?
+                } else {
+                    panic!("Cannot connect Kafka in 3s.");
+                };
 
                 let partition_client = Arc::new(
                     client
