@@ -70,12 +70,21 @@ Then, you just need to type one command.
 docker compose up
 ```
 
-This will build the Rust source code, run the Wasm server for the ETL function, and startup contaniners for a Redpanda server and a MySQL backing database. You can then use [the curl commands](#see-it-in-action) to send data to the Redpanda queue topic for the ETL.
+This will build the Rust source code, run the Wasm server for the ETL function, and startup contaniners for a Redpanda server and a MySQL backing database. 
+
+To try it out, log into the Redpanda container and send a message to the queue topic `order` as follows.
+
+```bash
+$ docker compose exec redpanda /bin/bash
+redpanda@1add2615774b:/$ cd /app
+redpanda@1add2615774b:/app$ cat order.json | rpk topic produce order
+Produced to partition 0 at offset 0 with timestamp 1667922788523.
+```
 
 To see the data in the database container, you can use the following commands.
 
 ```bash
-docker compose exec db /bin/bash
+$ docker compose exec db /bin/bash
 root@c97c472db02e:/# mysql -u root -pwhalehello mysql
 mysql> select * from orders;
 ... ...

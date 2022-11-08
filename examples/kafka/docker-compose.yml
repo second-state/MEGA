@@ -16,6 +16,8 @@ services:
       - 9092:9092
       - 9644:9644
       - 29092:29092
+    volumes:
+      - ./:/app
   etl:
     image: etl-kafka
     build:
