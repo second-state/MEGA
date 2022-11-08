@@ -67,6 +67,7 @@ jobs:
     - name: Test the webhook ETL service
       run: |
         cd examples/order
+        ls -al
         echo $'\nSend an order'
         curl http://localhost:3344/ -X POST -d @order.json
         echo $'\nQuery DB'
@@ -74,9 +75,9 @@ jobs:
         echo $'\Delete DB'
         mysql -u root -proot mysql -e "drop table orders"
         echo $'\nDone!'
+        cat nohup.out
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
-        cat nohup.out
 
     - name: Run the Redpanda ETL service on MySQL
       run: |
@@ -91,6 +92,7 @@ jobs:
     - name: Test the Redpanda ETL service
       run: |
         cd examples/kafka
+        ls -al
         # echo $'\nCreate a queue topic'
         # rpk topic create order
         echo $'\nSend an order'
@@ -101,8 +103,8 @@ jobs:
         echo $'\Delete DB'
         mysql -u root -proot mysql -e "drop table orders"
         echo $'\nDone!'
+        cat nohup.out
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
-        cat nohup.out
 
     
