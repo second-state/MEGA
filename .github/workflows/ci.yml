@@ -60,7 +60,7 @@ jobs:
         cargo clean
         cargo build --target wasm32-wasi --release
         wasmedgec target/wasm32-wasi/release/order.wasm order.wasm
-        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" order.wasm &
+        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" order.wasm > wasm.log 2>&1 &
         echo $! > wasmedge.pid
         sleep 15
         
@@ -75,7 +75,7 @@ jobs:
         echo $'\Delete DB'
         mysql -u root -proot mysql -e "drop table orders"
         echo $'\nDone!'
-        cat nohup.out
+        cat wasm.log
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
 
@@ -85,7 +85,7 @@ jobs:
         cargo clean
         cargo build --target wasm32-wasi --release
         wasmedgec target/wasm32-wasi/release/kafka.wasm kafka.wasm
-        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" --env "KAFKA_URL=kafka://127.0.0.1:9092/order" kafka.wasm &
+        nohup wasmedge --env "DATABASE_URL=mysql://root:root@127.0.0.1:3306/mysql" --env "KAFKA_URL=kafka://127.0.0.1:9092/order" kafka.wasm > wasm.log 2>&1 &
         echo $! > wasmedge.pid
         sleep 15
         
@@ -103,7 +103,7 @@ jobs:
         echo $'\Delete DB'
         mysql -u root -proot mysql -e "drop table orders"
         echo $'\nDone!'
-        cat nohup.out
+        cat wasm.log
         kill -9 `cat wasmedge.pid`
         rm wasmedge.pid
 
