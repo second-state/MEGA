@@ -7,7 +7,7 @@ services:
       - --overprovisioned
       - --node-id 0
       - --kafka-addr PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
-      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --advertise-kafka-addr PLAINTEXT://redpanda:29092,OUTSIDE://redpanda:9092
       - --pandaproxy-addr 0.0.0.0:8082
       - --advertise-pandaproxy-addr localhost:8082
     ports:
@@ -26,6 +26,7 @@ services:
       DATABASE_URL: mysql://root:whalehello@db:3306/mysql
       KAFKA_URL: kafka://redpanda:9092/order
       RUST_BACKTRACE: full
+      RUST_LOG: info
     restart: unless-stopped
     runtime: io.containerd.wasmedge.v1
   db:
