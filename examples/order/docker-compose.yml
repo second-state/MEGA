@@ -1,10 +1,9 @@
 services:
   etl:
     image: etl-webhook
+    platform: wasi/wasm
     build:
       context: .
-      platforms:
-        - wasi/wasm32
     ports:
       - 3344:3344
     environment:
