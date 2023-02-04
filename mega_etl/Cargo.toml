@@ -16,12 +16,12 @@ keywords = ["etl", "database", "streaming", "serverless", "wasm"]
 
 [dependencies]
 async-trait = "0.1.57"
-mysql_async_wasi = "0.30"
+mysql_async_wasi = "0.31"
 thiserror = "1.0"
 url = "2.3.1"
-hyper_wasi = {version = "0.15.0", features = ["full"]}
+hyper_wasi = {version = "0.15", features = ["full"]}
 anyhow = "1.0.65"
-tokio_wasi = {version = "1.21", features = ["net"]}
+tokio_wasi = {version = "1", features = ["net"]}
 log = "0.4.17"
 rskafka_wasi = "0.3"
 futures-util = "0.3"
