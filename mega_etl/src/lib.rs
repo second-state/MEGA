@@ -49,7 +49,7 @@ impl_from_transformer_error!(hyper::Error);
 
 enum DataSource {
     Hyper(String, u16),
-    Redis,
+    Redis(String, String),
     Kafka(String, u16, String),
     Unknown,
 }
@@ -71,7 +71,22 @@ impl DataSource {
                 };
                 Ok(DataSource::Hyper(host.to_string(), port))
             }
-            "redis" => Ok(DataSource::Redis),
+            //"redis" => Ok(DataSource::Redis(Host,Port)),
+            "redis" => {
+                let host= if let Some(host) = url.host_str(){
+                    host
+                }
+                else{
+                    return Err(url::ParseError::EmptyHost);
+                };
+                let password = if let Some(password) = url.password(){
+                    password
+                }
+                else{
+                    "Incorrect Password Provided!"
+                };
+                Ok(DataSource::Redis(host.to_string(), password.to_string()))
+            }
             "kafka" => {
                 let host = if let Some(host) = url.host_str() {
                     host
@@ -312,7 +327,13 @@ impl Pipe {
                     }
                 }
             }
-            DataSource::Redis => Err(TransformerError::Unimplemented),
+            DataSource::Redis(host,password) => {
+                let redis_hostname = host;
+                let redis_password = password;
+                let redis_conn_url = format!("redis://:{}@{}", redis_password, redis_hostname);
+                redis::Client::open(redis_conn_url).expect("Invalid Connection URL").get_connection().expect("Failed to connect to Redis");
+                Ok(())
+            }
             DataSource::Unknown => Err(TransformerError::Custom("Unknown data source".to_string())),
         }
     }
